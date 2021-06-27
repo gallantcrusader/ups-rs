@@ -57,7 +57,7 @@ target_file.write_all(&*patched_file_content);
  ```
 
 ## Contributing:
-Feel free to submit pull requests with improvements
+Feel free to submit pull requests with improvements.
 
 ## License
 All files in this repository except [UPS-spec.pdf](https://github.com/Laikar/ups-rs/blob/main/ups-spec.pdf "UPS-spec.pdf") and [ups_spec.md](https://github.com/Laikar/ups-rs/blob/main/ups_spec.md "ups_spec.md") are released under [MIT License](https://github.com/Laikar/ups-rs/blob/main/License.md "MIT License").
