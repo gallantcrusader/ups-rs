@@ -7,6 +7,10 @@ description = "A rust implementaiton of a UPS file patcher"
 homepage = "https://github.com/Laikar/ups-rs"
 repository = "https://github.com/Laikar/ups-rs"
 license = "MIT"
+exclude= [
+    "ups-spec.pdf",
+    "ups_spec.md"
+]
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 [dependencies]
