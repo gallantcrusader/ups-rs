@@ -4,8 +4,8 @@ version = "0.2.0"
 authors = ["David (Laikar)"]
 edition = "2018"
 description = "A rust implementaiton of a UPS file patcher"
-homepage = "https://github.com/Laikar/ups-rs"
-repository = "https://github.com/Laikar/ups-rs"
+homepage = "https://gitlab.com/Laikar/ups-rs"
+repository = "https://gitlab.com/Laikar/ups-rs"
 license = "MIT"
 exclude= [
     "ups-spec.pdf",

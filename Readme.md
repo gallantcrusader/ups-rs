@@ -2,6 +2,7 @@
 A rust implementation of a UPS file patcher.
 
 I am no rust expert, and this was made for me to actually learn rust, feel free to open an issue pointing any mistake you find.
+
 ## Usage
 
 ### Apply UPS patch:
@@ -55,7 +56,8 @@ target_file.write_all(&*patched_file_content);
  }
 
  ```
-
+##Documentation
+The documentation is on [docs.rs](https://docs.rs/ups)
 ## Contributing:
 Feel free to submit pull requests with improvements.
 

@@ -2,10 +2,7 @@ use std::convert::TryInto;
 
 use crate::{
     crc32,
-    UpsError
-};
-use crate::ups_error::{
-    *,
+    UpsError,
     LoadError::*,
     CreateError::*,
     ApplyError::*,
@@ -23,14 +20,14 @@ pub struct UpsPatch {
     /// They are stored in a vector of tuples containing offset and change list  where:
     ///
     /// 0, Offset:
-    /// A u64 pointer describing whre the current difference starts.
+    /// A u64 pointer describing where the current difference starts.
     ///
     /// 1, ChangeList:
     /// A vector of the XOR bytes that have to be applied to the source file in the current position.
     pub changes: Vec<(u64, Vec<u8>)>,
     /// The crc32 checksum of the source file
     pub source_crc32: u32,
-    /// The crcr32 checksum of the final file
+    /// The crc32 checksum of the final file
     pub target_crc32: u32,
     /// The crc 32 checksum of the patch file itself
     pub patch_crc32: u32,
@@ -90,7 +87,7 @@ impl UpsPatch {
             patch_crc32,
         }
     }
-    /// Loads an already existing patch, if the given file contents don't contain a valid UPS patch returns and error
+    /// Loads an already existing patch, if the given file contents don't contain a valid UPS patch returns a UpsError
     /// # Arguments
     /// * `content` - The content of the patch file to load
     /// # Examples
@@ -149,6 +146,14 @@ impl UpsPatch {
         };
         Ok(file)
     }
+
+    /// Given the contents of a file, verifies that it is the expected source for the patch,
+    /// applies the patch and verifies that the output is the expected target for the patch.
+    /// # Arguments
+    /// * `source` - The content of the source file
+    /// # Examples
+    /// Load a patch, apply it and save to a variable if everything is ok or panic if something went wrong
+    ///
     pub fn apply(&self, source:&Vec<u8>) -> Result<Vec<u8>, UpsError>{
         if !self.file_is_source(&source) {
             return Err(UpsError::Apply(SourceMismatch))
@@ -211,12 +216,12 @@ impl UpsPatch {
         return output;
     }
     /// Returns a vector with the contents of the patch.ups file
-    pub fn get_patch_file_contents(self) -> Vec<u8> {
+    pub fn get_patch_file_contents(&self) -> Vec<u8> {
         let mut output: Vec<u8> = vec![];
         output.extend(UpsPatch::CANON_HEADER);
         output.extend(UpsPatch::encode(self.source_file_size));
         output.extend(UpsPatch::encode(self.target_file_size));
-        for change in self.changes {
+        for change in &self.changes {
             output.extend(UpsPatch::encode(change.0));
             for byte in &change.1 {
                 output.push(*byte)

@@ -35,8 +35,7 @@
 //! use std::io::{Read, Write};
 //! # use std::error::Error;
 //! # fn main() -> Result<(), Box<dyn Error>>{
-//! //Loading the contents of the source and patch files
-//!
+//! //LOad the contents of the source and patch files
 //! let mut  source_file_content: Vec<u8> = vec![];
 //! let mut  target_file_content: Vec<u8> = vec![];
 //! let mut  source_file = File::open("path/to/source/file")?;
@@ -44,18 +43,13 @@
 //! let mut target_file = File::open("path/to/patch/file")?;
 //! target_file.read_to_end(&mut target_file_content);
 //!
-//! //creating the patch into a variable
+//! //Create the UpsPatch
 //! let patch = UpsPatch::create(&source_file_content, &target_file_content);
-//! //Check if the patch is made for the source patch
-//! if patch.file_is_source(&source_file_content) {
-//!     //Actually applying the patch
-//!     let patch_file_content = patch.get_patch_file_contents();
-//!     //Saving the target file contents to a file
-//!     let mut target_file = File::open("path/to/target/file")?;
-//!     target_file.write_all(&*patch_file_content);
-//! }else{
-//!     println!("This patch isn't intended for the given source")
-//! }
+//! //Write the patch to a file
+//! let patch_file_content = patch.get_patch_file_contents();
+//! let mut patch_file = File::open("path/to/target/file")?;
+//! patch_file.write_all(&patch_file_content);
+//!
 //! # Ok(())
 //! # }
 //!
@@ -63,7 +57,7 @@
 
 
 pub use crate::ups_patch::UpsPatch;
-pub use crate::ups_error::UpsError;
+pub use crate::ups_error::{UpsError, ApplyError, CreateError, LoadError};
 mod ups_patch;
 mod crc32;
-pub mod ups_error;
+mod ups_error;

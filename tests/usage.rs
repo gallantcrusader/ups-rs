@@ -1,12 +1,7 @@
-use std::fs::File;
-use std::io::Read;
 
-use ups::{UpsPatch};
-use ups::ups_error::{
-    *,
-    LoadError::*,
-    CreateError::*,
-    ApplyError::*,
+
+use ups::{
+    UpsPatch,
 };
 mod common;
 use common::*;
@@ -28,7 +23,13 @@ fn can_verify_source(){
     let source_content = load_file_content(SOURCE_PATH);
     assert!(patch.file_is_source(&source_content));
 }
-
+#[test]
+fn can_verify_target(){
+    let content = load_file_content(PATCH_PATH);
+    let patch = UpsPatch::load(&content).unwrap();
+    let target_content = load_file_content(TARGET_PATH);
+    assert!(patch.file_is_target(&target_content));
+}
 
 #[test]
 fn can_create_patch(){
@@ -56,5 +57,15 @@ fn can_apply_patch(){
     let patch_file_content = load_file_content(PATCH_PATH);
     let patch = UpsPatch::load(&patch_file_content).unwrap();
     let final_file_content = patch.apply_no_check(&source_content);
+    assert_eq!(final_file_content, target_content)
+}
+
+#[test]
+fn can_apply_and_test(){
+    let source_content = load_file_content(SOURCE_PATH);
+    let target_content = load_file_content(TARGET_PATH);
+    let patch_file_content = load_file_content(PATCH_PATH);
+    let patch = UpsPatch::load(&patch_file_content).unwrap();
+    let final_file_content = patch.apply(&source_content).unwrap();
     assert_eq!(final_file_content, target_content)
 }
