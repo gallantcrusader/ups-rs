@@ -1,11 +1,12 @@
 [package]
 name = "ups"
-version = "0.2.0"
+version = "0.2.1"
 authors = ["David (Laikar)"]
 edition = "2018"
 description = "A rust implementaiton of a UPS file patcher"
 homepage = "https://gitlab.com/Laikar/ups-rs"
 repository = "https://gitlab.com/Laikar/ups-rs"
+readme = "Readme.md"
 license = "MIT"
 exclude= [
     "ups-spec.pdf",
