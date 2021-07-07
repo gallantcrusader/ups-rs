@@ -1,6 +1,6 @@
 [package]
 name = "ups"
-version = "0.1.0"
+version = "0.2.0"
 authors = ["David (Laikar)"]
 edition = "2018"
 description = "A rust implementaiton of a UPS file patcher"
@@ -13,4 +13,13 @@ exclude= [
 ]
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[[test]]
+name = "usage_tests"
+path = "tests/usage.rs"
+
+[[test]]
+name = "error_tests"
+path = "tests/errors.rs"
+
 [dependencies]

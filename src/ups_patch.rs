@@ -1,8 +1,19 @@
 use std::convert::TryInto;
 
-use crate::crc32;
+use crate::{
+    crc32,
+    UpsError
+};
+use crate::ups_error::{
+    *,
+    LoadError::*,
+    CreateError::*,
+    ApplyError::*,
+};
+
 
 ///Represents a  ups patch
+#[derive(Debug)]
 pub struct UpsPatch {
     ///The file size of the original file
     pub source_file_size: u64,
@@ -87,23 +98,23 @@ impl UpsPatch {
     /// ```no_run
     /// # use ups::UpsPatch;
     /// # let file_content=vec![];
-    /// let patch = match UpsPatch::load(file_content) {
+    /// let patch = match UpsPatch::load(&file_content) {
     ///     Ok(patch) => patch,
     ///     Err(why) => panic!("Couldn't load UPS patch:{}", why)
     /// };
     ///
     /// ```
     ///
-    pub fn load(content: Vec<u8>) -> Result<UpsPatch, &'static str> {
+    pub fn load(content: &Vec<u8>) -> Result<UpsPatch, UpsError> {
         if content[0..4] != UpsPatch::CANON_HEADER {
-            return Err("File isn't UPS patch");
+            return Err(UpsError::Load(IsNotUpsFile));
         }
         let l = content.len();
         let patch_crc32 = u32::from_le_bytes(content[l - 4..l].try_into().unwrap());
         let patch_computed_crc32 = crc32::calculate(&content[0..l - 4]);
 
         if patch_computed_crc32 != patch_crc32 {
-            return Err("Patch seems to be corrupted,wrong crc32");
+            return Err(UpsError::Load(IsCorrupted));
         }
         let source_crc32 = u32::from_le_bytes(content[l - 12..l - 8].try_into().unwrap());
         let target_crc32 = u32::from_le_bytes(content[l - 8..l - 4].try_into().unwrap());
@@ -138,12 +149,22 @@ impl UpsPatch {
         };
         Ok(file)
     }
+    pub fn apply(&self, source:&Vec<u8>) -> Result<Vec<u8>, UpsError>{
+        if !self.file_is_source(&source) {
+            return Err(UpsError::Apply(SourceMismatch))
+        }
+        let target = self.apply_no_check(&source);
+        if !self.file_is_target(&target) {
+            return Err(UpsError::Apply(TargetMismatch))
+        }
+        Ok(target)
 
+    }
 
     /// Applies a patch to a given source file contents.
     /// This function doesn't check for file to actually be the correct source file, it just
     /// applies the patch.
-    pub fn apply_to(self, source: Vec<u8>) -> Vec<u8> {
+    pub fn apply_no_check(&self, source: &Vec<u8>) -> Vec<u8> {
         let mut output: Vec<u8> = vec![];
         let mut i: u64 = 0;
 
@@ -212,6 +233,11 @@ impl UpsPatch {
     pub fn file_is_source(&self, content: &Vec<u8>) -> bool {
         let file_crc32 = crc32::calculate(&content);
         return file_crc32 == self.source_crc32;
+    }
+
+    pub fn file_is_target(&self, content : &Vec<u8>) -> bool {
+        let file_crc32 = crc32::calculate(&content);
+        return file_crc32 == self.target_crc32;
     }
 
     fn find_pointer(buff: &Vec<u8>, start: usize) -> (usize, u64) {

@@ -19,8 +19,8 @@
 //! patch_file.read_to_end(&mut patch_file_content);
 //!
 //! //Actually applying the patch
-//! let patch = UpsPatch::load(patch_file_content)?;
-//! let patched_file_content = patch.apply_to(source_file_content);
+//! let patch = UpsPatch::load(&patch_file_content)?;
+//! let patched_file_content = patch.apply(&source_file_content)?;
 //! //Saving the target file contents to a file
 //! let mut target_file = File::open("path/to/target/file")?;
 //! target_file.write_all(&*patched_file_content);
@@ -61,6 +61,9 @@
 //!
 //! ```
 
-pub use crate::ups::UpsPatch;
-mod ups;
+
+pub use crate::ups_patch::UpsPatch;
+pub use crate::ups_error::UpsError;
+mod ups_patch;
 mod crc32;
+pub mod ups_error;
