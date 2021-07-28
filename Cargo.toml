@@ -1,6 +1,6 @@
 [package]
 name = "ups"
-version = "0.2.1"
+version = "0.3.0"
 authors = ["David (Laikar)"]
 edition = "2018"
 description = "A rust implementaiton of a UPS file patcher"

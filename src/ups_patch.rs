@@ -7,10 +7,9 @@ use crate::{
     CreateError::*,
     ApplyError::*,
 };
-
-
+use std::cmp::max;
 ///Represents a  ups patch
-#[derive(Debug)]
+#[derive(Debug, Eq, PartialEq)]
 pub struct UpsPatch {
     ///The file size of the original file
     pub source_file_size: u64,
@@ -20,7 +19,7 @@ pub struct UpsPatch {
     /// They are stored in a vector of tuples containing offset and change list  where:
     ///
     /// 0, Offset:
-    /// A u64 pointer describing where the current difference starts.
+    /// A u64 used as a pointer to the position where this change list begins
     ///
     /// 1, ChangeList:
     /// A vector of the XOR bytes that have to be applied to the source file in the current position.
@@ -50,15 +49,14 @@ impl UpsPatch {
         let target_file_size = target_content.len() as u64;
         let mut changes: Vec<(u64, Vec<u8>)> = vec![];
 
-        let max_size = if source_file_size > target_file_size { source_file_size } else { target_file_size };
-
+        let max_size = max(source_file_size, target_file_size);
 
         let mut i: u64 = 0;
         while i < max_size {
             let mut x: u8 = if i < source_file_size { source_content[i as usize] } else { 0x00 };
             let mut y: u8 = if i < target_file_size { target_content[i as usize] } else { 0x00 };
             if x != y {
-                let change_offset = i;
+                let change_offset = i as u64;
                 let mut changed_bytes: Vec<u8> = vec![];
                 while x != y && i < max_size {
                     changed_bytes.push(x ^ y);
@@ -66,7 +64,7 @@ impl UpsPatch {
                     x = if i < source_file_size { source_content[i as usize] } else { 0x00 };
                     y = if i < target_file_size { target_content[i as usize] } else { 0x00 };
                 }
-                changes.push((change_offset, changed_bytes))
+                changes.push( ( change_offset,  changed_bytes ))
             }
             i += 1
         }
@@ -124,6 +122,8 @@ impl UpsPatch {
         i = new_i;
 
         let mut changes: Vec<(u64, Vec<u8>)> = vec![];
+        let mut offset_diffs: Vec<u64> = vec![];
+        let mut xor_bytes_vec: Vec<Vec<u8>> = vec![];
         while i < l - 13 {
             let (new_i, offset_dif) = UpsPatch::find_pointer(&content, i);
             i = new_i;
@@ -132,7 +132,14 @@ impl UpsPatch {
                 xor_bytes.push(content[i]);
                 i += 1;
             }
-            changes.push((offset_dif, xor_bytes))
+            offset_diffs.push(offset_dif);
+            xor_bytes_vec.push(xor_bytes);
+        }
+        for ((i, offset_dif), xor_bytes) in offset_diffs.iter().enumerate().zip(xor_bytes_vec) {
+            let offset = offset_dif + if changes.len() > 0 {
+                changes[i-1].0 + changes[i-1].1.len() as u64 +1
+            } else { 0 };
+            changes.push( (offset, xor_bytes))
         }
 
 
@@ -165,29 +172,16 @@ impl UpsPatch {
         Ok(target)
 
     }
-
     /// Applies a patch to a given source file contents.
     /// This function doesn't check for file to actually be the correct source file, it just
     /// applies the patch.
     pub fn apply_no_check(&self, source: &Vec<u8>) -> Vec<u8> {
-        let mut output: Vec<u8> = vec![];
-        let mut i: u64 = 0;
-
+        let mut output: Vec<u8> = source.clone();
+        output.resize(max(self.source_file_size, self.target_file_size)as usize, 0);
         for change in &self.changes {
-            while i < change.0 {
-                output.push(source[i as usize]);
-                i += 1;
+            for (i, xor_byte) in change.1.iter().enumerate() {
+                output[change.0 as usize+i] ^= xor_byte;
             }
-            for xor_byte in &change.1 {
-                let source_byte = if i < source.len() as u64 { source[i as usize] } else { 0x00 };
-
-                output.push(source_byte ^ xor_byte);
-                i += 1;
-            }
-        }
-        while i < self.target_file_size {
-            output.push(source[i as usize]);
-            i += 1;
         }
         if output.len() > self.target_file_size as usize {
             output = output[0..self.target_file_size as usize].to_owned()
@@ -204,9 +198,12 @@ impl UpsPatch {
         output.extend(UpsPatch::CANON_HEADER);
         output.extend(UpsPatch::encode(source_file_size));
         output.extend(UpsPatch::encode(target_file_size));
-        for change in changes {
-            output.extend(UpsPatch::encode(change.0));
-            for byte in &change.1 {
+        for (i, (offset, xor_bytes)) in changes.iter().enumerate() {
+            let offset_to_encode : u64 = if i > 0 {
+                offset - (changes[i - 1].0 + changes[i - 1].1.len() as u64 + 1)
+            } else { *offset };
+            output.extend(UpsPatch::encode(offset_to_encode));
+            for byte in xor_bytes {
                 output.push(*byte)
             }
             output.push(0x00)
@@ -221,10 +218,10 @@ impl UpsPatch {
         output.extend(UpsPatch::CANON_HEADER);
         output.extend(UpsPatch::encode(self.source_file_size));
         output.extend(UpsPatch::encode(self.target_file_size));
-        for change in &self.changes {
-            output.extend(UpsPatch::encode(change.0));
-            for byte in &change.1 {
-                output.push(*byte)
+        for (offset, xor_bytes) in &self.changes {
+            output.extend(UpsPatch::encode(*offset));
+            for byte in xor_bytes {
+                output.push(*byte);
             }
             output.push(0x00)
         }
@@ -234,12 +231,13 @@ impl UpsPatch {
         return output;
     }
 
-    /// Checks if the given source file matches the source file for the UPS patch
+    /// Checks if the given file contents matches the source file for the UPS patch
     pub fn file_is_source(&self, content: &Vec<u8>) -> bool {
         let file_crc32 = crc32::calculate(&content);
         return file_crc32 == self.source_crc32;
     }
 
+    /// Checks if the given file contents matches the target file for the UPS patch
     pub fn file_is_target(&self, content : &Vec<u8>) -> bool {
         let file_crc32 = crc32::calculate(&content);
         return file_crc32 == self.target_crc32;
@@ -251,6 +249,10 @@ impl UpsPatch {
         return (i, decoded_pointer);
     }
     fn find_encoded_value(buff: &Vec<u8>, start: usize) -> (usize, Vec<u8>) {
+        let mut start = start;
+        while buff[start] == 0 {
+            start +=1;
+        }
         let mut i = start;
         while buff[i] & 0x80 == 0 {
             i += 1;
@@ -278,8 +280,6 @@ impl UpsPatch {
     }
 
 
-
-
     fn encode(input: u64) -> Vec<u8> {
         let mut input = input;
         let mut bytes: Vec<u8> = vec![];
@@ -288,12 +288,14 @@ impl UpsPatch {
         input >>= 7;
         while input != 0
         {
+
             bytes.push(x as u8);
             input -= 1;
             x = input & 0x7f;
             input >>= 7;
         }
         bytes.push((0x80 | x) as u8);
+
         return bytes;
     }
 
@@ -309,12 +311,14 @@ mod internal_tests {
 
     #[test]
     fn can_decode(){
-        assert_eq!(UpsPatch::decode(vec![0x0,0x7f,0x7e,0x86]), 16777216)
+        assert_eq!(UpsPatch::decode(vec![0x0,0x7f,0x7e,0x86]), 16777216);
+        assert_eq!(UpsPatch::decode(vec![0x9A]), 26)
     }
 
     #[test]
     fn can_encode(){
-        assert_eq!(UpsPatch::encode(16777216), vec![0x0,0x7f,0x7e,0x86])
+        assert_eq!(UpsPatch::encode(16777216), vec![0x0,0x7f,0x7e,0x86]);
+        assert_eq!(UpsPatch::encode(26), vec![0x9A]);
     }
 
     #[test]

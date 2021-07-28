@@ -17,7 +17,7 @@ fn throws_not_ups_file_error(){
 }
 #[test]
 fn throws_corrupt_file_error(){
-    let mut content = load_file_content(PATCH_PATH);
+    let mut content = load_file_content(PATCH_PATH_1);
     content[7] = content[7]+1;
     let result = UpsPatch::load(&content);
     assert!(result.is_err());
@@ -25,8 +25,8 @@ fn throws_corrupt_file_error(){
 }
 
 #[test]
-fn throws_wrong_source(){
-    let patch_content = load_file_content(PATCH_PATH);
+fn throws_wrong_source_error(){
+    let patch_content = load_file_content(PATCH_PATH_1);
     let patch = UpsPatch::load(&patch_content).unwrap();
     let mut source_content = load_file_content(SOURCE_PATH);
     assert!(patch.file_is_source(&source_content));

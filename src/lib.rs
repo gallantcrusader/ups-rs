@@ -18,7 +18,7 @@
 //! let mut patch_file = File::open("path/to/patch/file")?;
 //! patch_file.read_to_end(&mut patch_file_content);
 //!
-//! //AApply the patch
+//! //Apply the patch
 //! let patch = UpsPatch::load(&patch_file_content)?;
 //! let patched_file_content = patch.apply(&source_file_content)?;
 //! //Write the target to a file
@@ -56,7 +56,7 @@
 //! ```
 
 
-pub use crate::ups_patch::UpsPatch;
+pub use crate::ups_patch::{UpsPatch};
 pub use crate::ups_error::{UpsError, ApplyError, CreateError, LoadError};
 mod ups_patch;
 mod crc32;
